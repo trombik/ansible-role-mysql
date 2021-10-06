@@ -1,0 +1,9 @@
+---
+mysql_user: mysql
+mysql_group: mysql
+mysql_log_dir: /var/log/mysql
+mysql_db_dir: "{{ __mysql_db_dir }}"
+mysql_service: mysql
+mysql_conf_dir: "{{ __mysql_conf_dir }}"
+mysql_conf_file: "{{ __mysql_conf_dir }}/mysql.conf"
+mysql_flags: ""

@@ -1,0 +1,6 @@
+---
+
+- name: Install mysql
+  pkgng:
+    name: mysql
+    state: present

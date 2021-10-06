@@ -1,0 +1,3 @@
+---
+__mysql_db_dir: /var/db/mysql
+__mysql_conf_dir: /usr/local/etc/mysql
