@@ -4,9 +4,9 @@ require "serverspec"
 package = "mysql"
 service = "mysql-server"
 config_dir = "/etc/mysql"
-user    = "mysql"
-group   = "mysql"
-ports   = [3306]
+# user    = "mysql"
+# group   = "mysql"
+ports = [3306]
 default_user = "root"
 default_group = "root"
 default_random_password_file = nil
@@ -20,7 +20,7 @@ when "freebsd"
   default_group = "wheel"
   default_random_password_file = "/root/.mysql_secret"
 end
-config  = "#{config_dir}/my.cnf"
+config = "#{config_dir}/my.cnf"
 
 describe package(package) do
   it { should be_installed }

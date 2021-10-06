@@ -76,5 +76,5 @@
         priv: 'my_database.*:ALL'
     mysql_databases:
       - name:
-        - my_database
-        - other_database
+          - my_database
+          - other_database
