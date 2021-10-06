@@ -69,3 +69,12 @@
       max_allowed_packet              = 256M
       quote_names
       quick
+
+    mysql_users:
+      - name: me
+        password: my_password
+        priv: 'my_database.*:ALL'
+    mysql_databases:
+      - name:
+        - my_database
+        - other_database

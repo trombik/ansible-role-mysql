@@ -23,14 +23,14 @@
     that:
       - mysql_run_as_user in getent_passwd
 
-- name: Set fact mysql_run_as_user's home directory
+- name: Set fact mysql_run_as_user_conf
   set_fact:
-    mysql_run_as_user_home: "{{ getent_passwd[mysql_run_as_user][4] }}"
+    mysql_run_as_user_conf: "{{ getent_passwd[mysql_run_as_user][4] }}/.my.cnf"
 
 - name: Create .my.cnf in mysql_run_as_user_home
   ansible.builtin.template:
     src: user_my.cnf.j2
-    dest: "{{ mysql_run_as_user_home }}/.my.cnf"
+    dest: "{{ mysql_run_as_user_conf }}"
     owner: "{{ mysql_run_as_user }}"
     mode: "0600"
   notify: Restart mysql
@@ -53,3 +53,67 @@
   when:
     - __register_mysql_stat_mysql_secret.stat
     - __register_mysql_stat_mysql_secret.stat.exists
+
+- name: Manage mysql_databases
+  community.mysql.mysql_db:
+    ca_cert: "{{ item['ca_cert'] | default(omit) }}"
+    check_hostname: "{{ item['check_hostname'] | default(omit) }}"
+    check_implicit_admin: "{{ item['check_implicit_admin'] | default(omit) }}"
+    client_cert: "{{ item['client_cert'] | default(omit) }}"
+    client_key: "{{ item['client_key'] | default(omit) }}"
+    collation: "{{ item['collation'] | default(omit) }}"
+    config_file: "{{ item['config_file'] | default(mysql_run_as_user_conf) }}"
+    config_overrides_defaults: "{{ item['config_overrides_defaults'] | default(omit) }}"
+    connect_timeout: "{{ item['connect_timeout'] | default(omit) }}"
+    dump_extra_args: "{{ item['dump_extra_args'] | default(omit) }}"
+    encoding: "{{ item['encoding'] | default(omit) }}"
+    force: "{{ item['force'] | default(omit) }}"
+    hex_blob: "{{ item['hex_blob'] | default(omit) }}"
+    ignore_tables: "{{ item['ignore_tables'] | default(omit) }}"
+    login_host: "{{ item['login_host'] | default(omit) }}"
+    login_password: "{{ item['login_password'] | default(omit) }}"
+    login_port: "{{ item['login_port'] | default(omit) }}"
+    login_unix_socket: "{{ item['login_unix_socket'] | default(omit) }}"
+    login_user: "{{ item['login_user'] | default(omit) }}"
+    master_data: "{{ item['master_data'] | default(omit) }}"
+    name: "{{ item['name'] | default(omit) }}"
+    quick: "{{ item['quick'] | default(omit) }}"
+    restrict_config_file: "{{ item['restrict_config_file'] | default(omit) }}"
+    single_transaction: "{{ item['single_transaction'] | default(omit) }}"
+    skip_lock_tables: "{{ item['skip_lock_tables'] | default(omit) }}"
+    state: "{{ item['state'] | default(omit) }}"
+    target: "{{ item['target'] | default(omit) }}"
+    unsafe_login_password: "{{ item['unsafe_login_password'] | default(omit) }}"
+    use_shell: "{{ item['use_shell'] | default(omit) }}"
+  with_items: "{{ mysql_databases }}"
+
+- name: Manage mysql_users
+  community.mysql.mysql_user:
+    append_privs: "{{ item['append_privs'] | default(omit) }}"
+    ca_cert: "{{ item['ca_cert'] | default(omit) }}"
+    check_hostname: "{{ item['check_hostname'] | default(omit) }}"
+    check_implicit_admin: "{{ item['check_implicit_admin'] | default(omit) }}"
+    client_cert: "{{ item['client_cert'] | default(omit) }}"
+    client_key: "{{ item['client_key'] | default(omit) }}"
+    config_file: "{{ item['config_file'] | default(mysql_run_as_user_conf) }}"
+    connect_timeout: "{{ item['connect_timeout'] | default(omit) }}"
+    encrypted: "{{ item['encrypted'] | default(omit) }}"
+    host: "{{ item['host'] | default(omit) }}"
+    host_all: "{{ item['host_all'] | default(omit) }}"
+    login_host: "{{ item['login_host'] | default(mysql_login_host) }}"
+    login_password: "{{ item['login_password'] | default(omit) }}"
+    login_port: "{{ item['login_port'] | default(mysql_listen_port) }}"
+    login_unix_socket: "{{ item['login_unix_socket'] | default(omit) }}"
+    login_user: "{{ item['login_user'] | default(omit) }}"
+    name: "{{ item['name'] }}"
+    password: "{{ item['password'] | default(omit) }}"
+    plugin: "{{ item['plugin'] | default(omit) }}"
+    plugin_auth_string: "{{ item['plugin_auth_string'] | default(omit) }}"
+    plugin_hash_string: "{{ item['plugin_hash_string'] | default(omit) }}"
+    priv: "{{ item['priv'] | default(omit) }}"
+    resource_limits: "{{ item['resource_limits'] | default(omit) }}"
+    sql_log_bin: "{{ item['sql_log_bin'] | default(omit) }}"
+    state: "{{ item['state'] | default(omit) }}"
+    tls_requires: "{{ item['tls_requires'] | default(omit) }}"
+    update_password: "{{ item['update_password'] | default(omit) }}"
+  with_items: "{{ mysql_users }}"

@@ -10,6 +10,8 @@ ports   = [3306]
 default_user = "root"
 default_group = "root"
 default_random_password_file = nil
+databases = %w[my_database other_database]
+database_users = %w[me root]
 
 case os[:family]
 when "freebsd"
@@ -73,4 +75,20 @@ describe command "mysql --user=root --execute 'SELECT 42;'" do
   its(:exit_status) { should eq 0 }
   its(:stderr) { should eq "" }
   its(:stdout) { should match(/^42$/) }
+end
+
+describe command "mysql --user=root --execute 'SHOW DATABASES;'" do
+  its(:exit_status) { should eq 0 }
+  its(:stderr) { should eq "" }
+  databases.each do |name|
+    its(:stdout) { should match(/^#{name}$/) }
+  end
+end
+
+describe command "mysql --user=root --execute 'SELECT User FROM mysql.user;'" do
+  its(:exit_status) { should eq 0 }
+  its(:stderr) { should eq "" }
+  database_users.each do |name|
+    its(:stdout) { should match(/^#{name}$/) }
+  end
 end
