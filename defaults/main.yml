@@ -1,9 +1,19 @@
 ---
-mysql_user: mysql
-mysql_group: mysql
-mysql_log_dir: /var/log/mysql
+mysql_user: "{{ __mysql_user }}"
+mysql_group: "{{ __mysql_group }}"
 mysql_db_dir: "{{ __mysql_db_dir }}"
-mysql_service: mysql
+mysql_service: "{{ __mysql_service }}"
+mysql_package: "{{ __mysql_package }}"
+mysql_extra_packages: "{{ __mysql_extra_packages }}"
 mysql_conf_dir: "{{ __mysql_conf_dir }}"
-mysql_conf_file: "{{ __mysql_conf_dir }}/mysql.conf"
+mysql_conf_file: "{{ mysql_conf_dir }}/my.cnf"
+mysql_listen_port: 3306
+mysql_listen_address: 127.0.0.1
 mysql_flags: ""
+mysql_login_password: ""
+mysql_login_user: root
+mysql_login_host: "{{ mysql_listen_address }}"
+mysql_run_as_user: root
+mysql_extra_my_cnf_config: ""
+mysql_default_random_password_file: /root/.mysql_secret
+mysql_debug: no

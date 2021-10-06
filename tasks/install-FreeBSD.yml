@@ -1,6 +1,28 @@
 ---
 
 - name: Install mysql
-  pkgng:
-    name: mysql
+  ansible.builtin.pkgng:
+    name: "{{ mysql_package }}"
     state: present
+
+- name: Install PyMySQL
+  ansible.builtin.pkgng:
+    name: "py{{ ansible_python['version']['major'] }}{{ ansible_python['version']['minor'] }}-pymysql"
+    state: present
+
+- name: Install mysql_extra_packages
+  ansible.builtin.pkgng:
+    name: "{{ mysql_extra_packages }}"
+    state: present
+
+- name: Create /etc/rc.conf.d/mysql_server
+  template:
+    src: FreeBSD.rcd.j2
+    dest: /etc/rc.conf.d/mysql_server
+    mode: "0644"
+    validate: /bin/sh -n %s
+
+- name: Enable mysql_service
+  ansible.builtin.service:
+    name: "{{ mysql_service }}"
+    enabled: yes

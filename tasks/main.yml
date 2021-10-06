@@ -1,37 +1,55 @@
 ---
 # tasks file for ansible-role-mysql
 
-- include_vars: "{{ ansible_os_family }}.yml"
+- name: Include OS-specific variables
+  include_vars: "{{ ansible_os_family }}.yml"
 
-- include: "install-{{ ansible_os_family }}.yml"
+- name: "Include install-{{ ansible_os_family }}.yml"
+  include: "install-{{ ansible_os_family }}.yml"
 
-- name: Create log directory
-  file:
-    path: "{{ mysql_log_dir }}"
-    mode: 0755
-    owner: "{{ mysql_user }}"
-    group: "{{ mysql_group }}"
-    state: directory
-  notify: Restart mysql
-
-- name: Create db directory
-  file:
-    path: "{{ mysql_db_dir }}"
-    mode: 0755
-    owner: "{{ mysql_user }}"
-    group: "{{ mysql_group }}"
-    state: directory
-  notify: Restart mysql
-
-- name: Create mysql.conf
-  template:
-    src: mysql.conf.j2
+- name: Create mysql_conf_file
+  ansible.builtin.template:
+    src: my.conf.j2
     dest: "{{ mysql_conf_file }}"
-    validate: echo %s
+    # validate: echo %s
+
+- name: Get mysql_run_as_user user info
+  getent:
+    database: passwd
+    key: "{{ mysql_run_as_user }}"
+
+- name: Assert mysql_run_as_user in getent
+  assert:
+    that:
+      - mysql_run_as_user in getent_passwd
+
+- name: Set fact mysql_run_as_user's home directory
+  set_fact:
+    mysql_run_as_user_home: "{{ getent_passwd[mysql_run_as_user][4] }}"
+
+- name: Create .my.cnf in mysql_run_as_user_home
+  ansible.builtin.template:
+    src: user_my.cnf.j2
+    dest: "{{ mysql_run_as_user_home }}/.my.cnf"
+    owner: "{{ mysql_run_as_user }}"
+    mode: "0600"
   notify: Restart mysql
 
 - name: Start mysql
-  service:
+  ansible.builtin.service:
     name: "{{ mysql_service }}"
-    enabled: true
     state: started
+
+- name: See if mysql_default_random_password_file exists
+  # if this file exists, that means default password is random, expired, and
+  # not updated yet.
+  ansible.builtin.stat:
+    path: "{{ mysql_default_random_password_file }}"
+  register:
+    __register_mysql_stat_mysql_secret
+
+- name: Include reset-password-random.yml
+  include_tasks: reset-password-random.yml
+  when:
+    - __register_mysql_stat_mysql_secret.stat
+    - __register_mysql_stat_mysql_secret.stat.exists

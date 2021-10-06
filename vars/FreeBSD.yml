@@ -1,3 +1,8 @@
 ---
+__mysql_user: mysql
+__mysql_group: mysql
 __mysql_db_dir: /var/db/mysql
+__mysql_service: mysql-server
+__mysql_package: mysql57-server
+__mysql_extra_packages: []
 __mysql_conf_dir: /usr/local/etc/mysql
