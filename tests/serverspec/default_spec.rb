@@ -1,8 +1,8 @@
 require "spec_helper"
 require "serverspec"
 
-package = "mysql"
-service = "mysql-server"
+package = "mysql-server"
+service = "mysql"
 config_dir = "/etc/mysql"
 # user    = "mysql"
 # group   = "mysql"
@@ -12,25 +12,37 @@ default_group = "root"
 default_random_password_file = nil
 databases = %w[my_database other_database]
 database_users = %w[me root]
+fragments = []
 
 case os[:family]
+when "ubuntu"
+  fragments = %w[mysql.cnf debian.cnf my.cnf.fallback conf.d/mysqldump.cnf conf.d/mysql.cnf mysql.conf.d/mysql.cnf mysql.conf.d/mysqld.cnf]
 when "freebsd"
   package = "mysql57-server"
+  service = "mysql-server"
   config_dir = "/usr/local/etc/mysql"
   default_group = "wheel"
   default_random_password_file = "/root/.mysql_secret"
+  fragments = %w[my.cnf]
 end
-config = "#{config_dir}/my.cnf"
 
 describe package(package) do
   it { should be_installed }
 end
 
-describe file(config) do
-  it { should exist }
-  it { should be_file }
-  it { should be_mode 644 }
-  its(:content) { should match Regexp.escape("Managed by ansible") }
+fragments.each do |f|
+  describe file "#{config_dir}/#{f}" do
+    it { should exist }
+    it { should be_file }
+    it { should be_owned_by default_user }
+    it { should be_grouped_into default_group }
+    if f == "debian.cnf"
+      it { should be_mode 600 }
+    else
+      it { should be_mode 644 }
+    end
+    its(:content) { should match Regexp.escape("Managed by ansible") }
+  end
 end
 
 case os[:family]
@@ -41,6 +53,11 @@ when "freebsd"
     it { should be_mode 644 }
     it { should be_owned_by default_user }
     it { should be_grouped_into default_group }
+  end
+when "ubuntu"
+  describe file "/etc/mysql/my.cnf" do
+    it { should exist }
+    it { should be_symlink }
   end
 end
 

@@ -1,0 +1,27 @@
+---
+
+- name: Install mysql
+  ansible.builtin.apt:
+    name: "{{ mysql_package }}"
+    state: present
+  register: __register_mysql_apt_mysql
+
+- name: Install PyMySQL
+  ansible.builtin.apt:
+    name: "python{{ ansible_python['version']['major'] }}-pymysql"
+    state: present
+
+- name: Include reset-password-empty.yml
+  include_tasks: reset-password-empty.yml
+  when:
+    - __register_mysql_apt_mysql['changed']
+
+- name: Install mysql_extra_packages
+  ansible.builtin.apt:
+    name: "{{ mysql_extra_packages }}"
+    state: present
+
+- name: Enable mysql_service
+  ansible.builtin.service:
+    name: "{{ mysql_service }}"
+    enabled: yes

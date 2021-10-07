@@ -6,74 +6,148 @@
     mysql_login_password: password
     mysql_extra_my_cnf_config: |
       # mysql_extra_my_cnf_config
-    mysql_config: |
-      [client]
-      port                            = {{ mysql_listen_port }}
-      socket                          = /tmp/mysql.sock
 
-      [mysql]
-      prompt                          = \u@\h [\d]>\_
-      no_auto_rehash
+    mysql_config: "{{ os_mysql_config[ansible_os_family] }}"
+    os_mysql_config_fragments:
+      FreeBSD:
+        - name: remove_me.cnf
+          state: absent
+        - name: my.cnf
+          content: |
+            [client]
+            port                            = {{ mysql_listen_port }}
+            socket                          = /tmp/mysql.sock
 
-      [mysqld]
-      user                            = mysql
-      port                            = {{ mysql_listen_port }}
-      socket                          = /tmp/mysql.sock
-      bind-address                    = {{ mysql_listen_address }}
-      basedir                         = /usr/local
-      datadir                         = {{ mysql_db_dir }}
-      tmpdir                          = /var/db/mysql_tmpdir
-      slave-load-tmpdir               = /var/db/mysql_tmpdir
-      secure-file-priv                = /var/db/mysql_secure
-      log-bin                         = mysql-bin
-      log-output                      = TABLE
-      master-info-repository          = TABLE
-      relay-log-info-repository       = TABLE
-      relay-log-recovery              = 1
-      slow-query-log                  = 1
-      server-id                       = 1
-      sync_binlog                     = 1
-      sync_relay_log                  = 1
-      binlog_cache_size               = 16M
-      expire_logs_days                = 30
-      default_password_lifetime       = 0
-      enforce-gtid-consistency        = 1
-      gtid-mode                       = ON
-      safe-user-create                = 1
-      lower_case_table_names          = 1
-      explicit-defaults-for-timestamp = 1
-      myisam-recover-options          = BACKUP,FORCE
-      open_files_limit                = 32768
-      table_open_cache                = 16384
-      table_definition_cache          = 8192
-      net_retry_count                 = 16384
-      key_buffer_size                 = 256M
-      max_allowed_packet              = 64M
-      query_cache_type                = 0
-      query_cache_size                = 0
-      long_query_time                 = 0.5
-      innodb_buffer_pool_size         = 1G
-      innodb_data_home_dir            = {{ mysql_db_dir }}
-      innodb_log_group_home_dir       = {{ mysql_db_dir }}
-      innodb_data_file_path           = ibdata1:128M:autoextend
-      innodb_temp_data_file_path      = ibtmp1:128M:autoextend
-      innodb_flush_method             = O_DIRECT
-      innodb_log_file_size            = 256M
-      innodb_log_buffer_size          = 16M
-      innodb_write_io_threads         = 8
-      innodb_read_io_threads          = 8
-      innodb_autoinc_lock_mode        = 2
-      skip-symbolic-links
+            [mysql]
+            prompt                          = \u@\h [\d]>\_
+            no_auto_rehash
 
-      [mysqldump]
-      max_allowed_packet              = 256M
-      quote_names
-      quick
+            [mysqld]
+            user                            = mysql
+            port                            = {{ mysql_listen_port }}
+            socket                          = /tmp/mysql.sock
+            bind-address                    = {{ mysql_listen_address }}
+            basedir                         = /usr/local
+            datadir                         = {{ mysql_db_dir }}
+            tmpdir                          = /var/db/mysql_tmpdir
+            slave-load-tmpdir               = /var/db/mysql_tmpdir
+            secure-file-priv                = /var/db/mysql_secure
+            log-bin                         = mysql-bin
+            log-output                      = TABLE
+            master-info-repository          = TABLE
+            relay-log-info-repository       = TABLE
+            relay-log-recovery              = 1
+            slow-query-log                  = 1
+            server-id                       = 1
+            sync_binlog                     = 1
+            sync_relay_log                  = 1
+            binlog_cache_size               = 16M
+            expire_logs_days                = 30
+            default_password_lifetime       = 0
+            enforce-gtid-consistency        = 1
+            gtid-mode                       = ON
+            safe-user-create                = 1
+            lower_case_table_names          = 1
+            explicit-defaults-for-timestamp = 1
+            myisam-recover-options          = BACKUP,FORCE
+            open_files_limit                = 32768
+            table_open_cache                = 16384
+            table_definition_cache          = 8192
+            net_retry_count                 = 16384
+            key_buffer_size                 = 256M
+            max_allowed_packet              = 64M
+            query_cache_type                = 0
+            query_cache_size                = 0
+            long_query_time                 = 0.5
+            innodb_buffer_pool_size         = 1G
+            innodb_data_home_dir            = {{ mysql_db_dir }}
+            innodb_log_group_home_dir       = {{ mysql_db_dir }}
+            innodb_data_file_path           = ibdata1:128M:autoextend
+            innodb_temp_data_file_path      = ibtmp1:128M:autoextend
+            innodb_flush_method             = O_DIRECT
+            innodb_log_file_size            = 256M
+            innodb_log_buffer_size          = 16M
+            innodb_write_io_threads         = 8
+            innodb_read_io_threads          = 8
+            innodb_autoinc_lock_mode        = 2
+            skip-symbolic-links
 
+            [mysqldump]
+            max_allowed_packet              = 256M
+            quote_names
+            quick
+      Debian:
+        - name: remove_me.cnf
+          state: absent
+        # the following contents were taken from Ubuntu 20.04 (focal),
+        # mysql-server-8.0, without comments.
+        #
+        # cd /etc/mysql
+        # cat * */* | sed -e 's/^#.*//' -e '/^$/d' > /tmp/old
+        # cat * */* | sed -e 's/^#.*//' -e '/^$/d' > /tmp/new
+        # diff -Nru /tmp/old /tmp/new
+        #
+        # XXX my.cnf on Ubuntu is a symlink. follow the link with `follow:
+        # yes`, and do not create `/etc/mysql/mysql.cnf`.
+        #
+        # my.cnf -> /etc/alternatives/my.cnf -> /etc/mysql/mysql.cnf
+        - name: my.cnf
+          follow: yes
+          content: |
+            !includedir /etc/mysql/conf.d/
+            !includedir /etc/mysql/mysql.conf.d/
+        - name: debian.cnf
+          # XXX managing `debian.cnf` with ansible is not a good idea.
+          # avoid in production if possible
+          mode: '0600'
+          content: |
+            [client]
+            host     = localhost
+            user     = debian-sys-maint
+            password = CJ8GXhz10RaeSNE9
+            socket   = /var/run/mysqld/mysqld.sock
+            [mysql_upgrade]
+            host     = localhost
+            user     = debian-sys-maint
+            password = CJ8GXhz10RaeSNE9
+            socket   = /var/run/mysqld/mysqld.sock
+        - name: my.cnf.fallback
+          content: |
+            !includedir /etc/mysql/conf.d/
+        - name: conf.d/mysqldump.cnf
+          content: |
+            [mysqldump]
+            quick
+            quote-names
+            max_allowed_packet	= 16M
+        - name: conf.d/mysql.cnf
+          content: |
+            [mysql]
+        - name: mysql.conf.d/mysql.cnf
+          content: |
+            [mysql]
+        - name: mysql.conf.d/mysqld.cnf
+          content: |
+            [mysqld]
+            user		= mysql
+            bind-address		= 127.0.0.1
+            mysqlx-bind-address	= 127.0.0.1
+            key_buffer_size		= 16M
+            myisam-recover-options  = BACKUP
+            log_error = /var/log/mysql/error.log
+            max_binlog_size   = 100M
+
+    mysql_config_fragments: "{{ os_mysql_config_fragments[ansible_os_family] }}"
     mysql_users:
       - name: me
         password: my_password
-        priv: 'my_database.*:ALL'
+        # with MySQL 8.x on Ubuntu, setting `priv` causes idempotency failure
+        #
+        # a similar issue:
+        # https://github.com/ansible-collections/community.mysql/issues/77
+        #
+        # first, ansible 2.10.x must be installed in the box.
+        # priv: 'my_database.*:SELECT'
     mysql_databases:
       - name:
           - my_database

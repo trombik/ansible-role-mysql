@@ -7,11 +7,45 @@
 - name: "Include install-{{ ansible_os_family }}.yml"
   include: "install-{{ ansible_os_family }}.yml"
 
-- name: Create mysql_conf_file
+- name: Assert state in mysql_config_fragments
+  ansible.builtin.assert:
+    that:
+      - item['state'] == 'present' or item['state'] == 'absent'
+  with_items: "{{ mysql_config_fragments }}"
+  when:
+    - "'state' in item"
+
+- debug:
+    var: os_mysql_config_fragments[ansible_os_family]
+
+- name: Assert name in mysql_config_fragments
+  ansible.builtin.assert:
+    that:
+      - '"name" in item'
+      - item['name']
+      - item['name'] | length > 0
+  with_items: "{{ mysql_config_fragments }}"
+
+- name: Create items in mysql_config_fragments
   ansible.builtin.template:
-    src: my.conf.j2
-    dest: "{{ mysql_conf_file }}"
-    # validate: echo %s
+    src: fragment.j2
+    dest: "{{ mysql_conf_dir }}/{{ item['name'] }}"
+    mode: "{{ item['mode'] | default('0644') }}"
+    follow: "{{ item['follow'] | default(omit) }}"
+  with_items: "{{ mysql_config_fragments }}"
+  when:
+    - not 'state' in item or item['state'] == 'present'
+  notify: Restart mysql
+
+- name: Remove items in mysql_config_fragments
+  ansible.builtin.file:
+    path: "{{ mysql_conf_dir }}/{{ item['name'] }}"
+    state: absent
+  with_items: "{{ mysql_config_fragments }}"
+  when:
+    - "'state' in item"
+    - item['state'] == 'absent'
+  notify: Restart mysql
 
 - name: Get mysql_run_as_user user info
   getent:
@@ -33,7 +67,6 @@
     dest: "{{ mysql_run_as_user_conf }}"
     owner: "{{ mysql_run_as_user }}"
     mode: "0600"
-  notify: Restart mysql
 
 - name: Start mysql
   ansible.builtin.service:
@@ -55,7 +88,11 @@
     - __register_mysql_stat_mysql_secret.stat.exists
 
 - name: Manage mysql_databases
-  community.mysql.mysql_db:
+  # ansible version on Ubuntu is not very new.
+  # use short hand name for now.
+  #
+  # ERROR! couldn't resolve module/action 'community.mysql.mysql_db'.
+  mysql_db:
     ca_cert: "{{ item['ca_cert'] | default(omit) }}"
     check_hostname: "{{ item['check_hostname'] | default(omit) }}"
     check_implicit_admin: "{{ item['check_implicit_admin'] | default(omit) }}"
@@ -88,7 +125,7 @@
   with_items: "{{ mysql_databases }}"
 
 - name: Manage mysql_users
-  community.mysql.mysql_user:
+  mysql_user:
     append_privs: "{{ item['append_privs'] | default(omit) }}"
     ca_cert: "{{ item['ca_cert'] | default(omit) }}"
     check_hostname: "{{ item['check_hostname'] | default(omit) }}"

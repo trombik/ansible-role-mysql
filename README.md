@@ -2,6 +2,14 @@
 
 A brief description of the role goes here.
 
+## Known issues
+
+Although `mysql_server_debug`, a role variable to enable or disable certain
+log outputs from `ansible`, is available, you should not rely on it because
+the role manages contents of various `*.cnf` and other files within loops. It
+is possible to disable logs in every loop, but that makes debugging extremely
+difficult.
+
 # Requirements
 
 None
