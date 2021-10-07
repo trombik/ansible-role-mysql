@@ -154,3 +154,9 @@
     tls_requires: "{{ item['tls_requires'] | default(omit) }}"
     update_password: "{{ item['update_password'] | default(omit) }}"
   with_items: "{{ mysql_users }}"
+  # XXX disable `changed` until when:
+  # * the Ubuntu box is updated
+  # * and the issue is resolved
+  #
+  # https://github.com/ansible-collections/community.mysql/issues/77
+  changed_when: false
