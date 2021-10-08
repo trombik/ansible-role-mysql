@@ -1,0 +1,42 @@
+---
+
+- name: Update curl
+  # the one on my VM is old.
+  # Can't install mariadb-server-10.5.12p0v1 because of libraries
+  # |library curl.26.11 not found
+  # | /usr/local/lib/libcurl.so.26.9 (curl-7.76.0): minor is too small
+  openbsd_pkg:
+    name: curl
+    state: latest
+
+- name: Install mysql
+  openbsd_pkg:
+    name: "{{ mysql_package }}"
+    state: present
+  register: __register_mysql_openbsd_pkg_mysql
+
+- name: Set fact __mysql_reset_password_empty
+  set_fact:
+    __mysql_reset_password_empty: yes
+  when:
+    - __register_mysql_openbsd_pkg_mysql['changed']
+
+- name: Run /usr/local/bin/mysql_install_db
+  command: /usr/local/bin/mysql_install_db --skip-name-resolve
+  when:
+    - __register_mysql_openbsd_pkg_mysql['changed']
+
+- name: Install PyMySQL
+  openbsd_pkg:
+    name: "py{{ ansible_python['version']['major'] }}-pymysql"
+    state: present
+
+- name: Install mysql_extra_packages
+  openbsd_pkg:
+    name: "{{ mysql_extra_packages }}"
+    state: present
+
+- name: Enable mysql_service
+  service:
+    name: "{{ mysql_service }}"
+    enabled: yes

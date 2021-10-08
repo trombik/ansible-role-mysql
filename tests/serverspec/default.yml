@@ -8,7 +8,34 @@
       # mysql_extra_my_cnf_config
 
     mysql_config: "{{ os_mysql_config[ansible_os_family] }}"
+    os_mysql_extra_packages:
+      FreeBSD: []
+      Debian: []
+      OpenBSD:
+        - mariadb-client
+    mysql_extra_packages: "{{ os_mysql_extra_packages[ansible_os_family] }}"
     os_mysql_config_fragments:
+      OpenBSD:
+        - name: my.cnf
+          state: present
+          content: |
+            # OpenBSD does not provide any default my.cnf
+            [client]
+            port                            = {{ mysql_listen_port }}
+
+            [mysql]
+            prompt                          = \u@\h [\d]>\_
+            no_auto_rehash
+
+            [mysqld]
+            user                            = {{ mysql_user }}
+            port                            = {{ mysql_listen_port }}
+            bind-address                    = {{ mysql_listen_address }}
+
+            [mysqldump]
+            max_allowed_packet              = 256M
+            quote_names
+            quick
       FreeBSD:
         - name: remove_me.cnf
           state: absent
@@ -16,7 +43,7 @@
           content: |
             [client]
             port                            = {{ mysql_listen_port }}
-            socket                          = /tmp/mysql.sock
+            socket                          = {{ mysql_socket_file }}
 
             [mysql]
             prompt                          = \u@\h [\d]>\_
@@ -25,7 +52,7 @@
             [mysqld]
             user                            = mysql
             port                            = {{ mysql_listen_port }}
-            socket                          = /tmp/mysql.sock
+            socket                          = {{ mysql_socket_file }}
             bind-address                    = {{ mysql_listen_address }}
             basedir                         = /usr/local
             datadir                         = {{ mysql_db_dir }}
@@ -105,12 +132,12 @@
             host     = localhost
             user     = debian-sys-maint
             password = CJ8GXhz10RaeSNE9
-            socket   = /var/run/mysqld/mysqld.sock
+            socket   = {{ mysql_socket_file }}
             [mysql_upgrade]
             host     = localhost
             user     = debian-sys-maint
             password = CJ8GXhz10RaeSNE9
-            socket   = /var/run/mysqld/mysqld.sock
+            socket   = {{ mysql_socket_file }}
         - name: my.cnf.fallback
           content: |
             !includedir /etc/mysql/conf.d/

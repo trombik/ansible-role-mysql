@@ -24,6 +24,10 @@ when "freebsd"
   default_group = "wheel"
   default_random_password_file = "/root/.mysql_secret"
   fragments = %w[my.cnf]
+when "openbsd"
+  package = "mariadb-server"
+  default_group = "wheel"
+  service = "mysqld"
 end
 
 describe package(package) do

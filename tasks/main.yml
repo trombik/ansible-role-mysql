@@ -4,6 +4,10 @@
 - name: Include OS-specific variables
   include_vars: "{{ ansible_os_family }}.yml"
 
+- name: Set fact __mysql_reset_password_empty
+  set_fact:
+    __mysql_reset_password_empty: no
+
 - name: "Include install-{{ ansible_os_family }}.yml"
   include: "install-{{ ansible_os_family }}.yml"
 
@@ -14,9 +18,6 @@
   with_items: "{{ mysql_config_fragments }}"
   when:
     - "'state' in item"
-
-- debug:
-    var: os_mysql_config_fragments[ansible_os_family]
 
 - name: Assert name in mysql_config_fragments
   ansible.builtin.assert:
@@ -47,6 +48,16 @@
     - item['state'] == 'absent'
   notify: Restart mysql
 
+- name: Start mysql
+  ansible.builtin.service:
+    name: "{{ mysql_service }}"
+    state: started
+
+- name: Include reset-password-empty.yml
+  include_tasks: reset-password-empty.yml
+  when:
+    - __mysql_reset_password_empty
+
 - name: Get mysql_run_as_user user info
   getent:
     database: passwd
@@ -67,11 +78,6 @@
     dest: "{{ mysql_run_as_user_conf }}"
     owner: "{{ mysql_run_as_user }}"
     mode: "0600"
-
-- name: Start mysql
-  ansible.builtin.service:
-    name: "{{ mysql_service }}"
-    state: started
 
 - name: See if mysql_default_random_password_file exists
   # if this file exists, that means default password is random, expired, and
