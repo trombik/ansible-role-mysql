@@ -4,6 +4,7 @@
   ansible.builtin.apt:
     name: "{{ mysql_package }}"
     state: present
+    policy_rc_d: 101
   register: __register_mysql_apt_mysql
 
 - name: Install PyMySQL
@@ -11,8 +12,9 @@
     name: "python{{ ansible_python['version']['major'] }}-pymysql"
     state: present
 
-- name: Include reset-password-empty.yml
-  include_tasks: reset-password-empty.yml
+- name: Set fact __mysql_reset_password_empty
+  set_fact:
+    __mysql_reset_password_empty: yes
   when:
     - __register_mysql_apt_mysql['changed']
 
