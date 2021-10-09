@@ -2,10 +2,19 @@
 # tasks file for ansible-role-mysql
 
 - name: Include OS-specific variables
-  include_vars: "{{ ansible_os_family }}.yml"
+  include_vars: "{{ lookup('first_found', params) }}"
+  vars:
+    params:
+      files:
+        - "{{ ansible_distribution }}.yml"
+        - "{{ ansible_os_family }}.yml"
+      paths:
+        - vars
 
-- name: Set fact __mysql_reset_password_empty
-  set_fact:
+- name: Set fact __mysql_reset_password_empty to no by default
+  # XXX set this fact to yes when the package creates root user without
+  # password.
+  ansible.builtin.set_fact:
     __mysql_reset_password_empty: no
 
 - name: "Include install-{{ ansible_os_family }}.yml"
@@ -58,18 +67,34 @@
   when:
     - __mysql_reset_password_empty
 
+- name: Include fixup-debian-cnf.yml
+  # XXX `mysql` on Debian (and Ubuntu) uses `debian-sys-maint` MySQL user to
+  # something I don't (want to) know. the user has random password, which is
+  # generated when initializing MySQL. `debian.cnf` includes the random
+  # password.
+  #
+  # however, Debian replaced `mysql` with `mariadb`. `mariadb-server` on
+  # Debian removed `debian-sys-maint` MySQL user. Instead, the default
+  # installation requires `root` MySQL user with no password. despite the fact
+  # that "do not touch this file" warning at the top of the file, you must set
+  # password of `root` MySQL user _if_ `root` user has password.
+  include_tasks: fixup-debian-cnf.yml
+  when:
+    - ansible_distribution == 'Devuan' or ansible_distribution == 'Debian'
+    - mysql_package | regex_search("mariadb")
+
 - name: Get mysql_run_as_user user info
   getent:
     database: passwd
     key: "{{ mysql_run_as_user }}"
 
 - name: Assert mysql_run_as_user in getent
-  assert:
+  ansible.builtin.assert:
     that:
       - mysql_run_as_user in getent_passwd
 
 - name: Set fact mysql_run_as_user_conf
-  set_fact:
+  ansible.builtin.set_fact:
     mysql_run_as_user_conf: "{{ getent_passwd[mysql_run_as_user][4] }}/.my.cnf"
 
 - name: Create .my.cnf in mysql_run_as_user_home

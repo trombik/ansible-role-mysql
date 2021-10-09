@@ -1,0 +1,9 @@
+---
+__mysql_user: mysql
+__mysql_group: mysql
+__mysql_db_dir: /var/lib/mysql
+__mysql_service: mysql
+__mysql_package: mariadb-server
+__mysql_extra_packages: []
+__mysql_conf_dir: /etc/mysql
+__mysql_socket_file: /var/run/mysqld/mysqld.sock
