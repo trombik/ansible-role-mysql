@@ -1,0 +1,7 @@
+---
+
+- name: Fixup debian.cnf
+  template:
+    src: debian.cnf.j2
+    dest: "{{ mysql_conf_dir }}/debian.cnf"
+    mode: "0600"

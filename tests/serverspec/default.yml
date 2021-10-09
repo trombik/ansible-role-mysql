@@ -14,6 +14,131 @@
       OpenBSD:
         - mariadb-client
     mysql_extra_packages: "{{ os_mysql_extra_packages[ansible_os_family] }}"
+    dist_mysql_config_fragments:
+      # define FreeBSD and OpenBSD here otherwise ansible complains, saying dict object has no attribute FreeBSD
+      FreeBSD: []
+      OpenBSD: []
+      Ubuntu:
+        - name: remove_me.cnf
+          state: absent
+        # the following contents were taken from Ubuntu 20.04 (focal),
+        # mysql-server-8.0, without comments.
+        #
+        # cd /etc/mysql
+        # cat * */* | sed -e 's/^#.*//' -e '/^$/d' > /tmp/old
+        # cat * */* | sed -e 's/^#.*//' -e '/^$/d' > /tmp/new
+        # diff -Nru /tmp/old /tmp/new
+        #
+        # XXX my.cnf on Ubuntu is a symlink. follow the link with `follow:
+        # yes`, and do not create `/etc/mysql/mysql.cnf`.
+        #
+        # my.cnf -> /etc/alternatives/my.cnf -> /etc/mysql/mysql.cnf
+        - name: my.cnf
+          follow: yes
+          content: |
+            !includedir /etc/mysql/conf.d/
+            !includedir /etc/mysql/mysql.conf.d/
+        - name: my.cnf.fallback
+          content: |
+            !includedir /etc/mysql/conf.d/
+        - name: conf.d/mysqldump.cnf
+          content: |
+            [mysqldump]
+            quick
+            quote-names
+            max_allowed_packet	= 16M
+        - name: conf.d/mysql.cnf
+          content: |
+            [mysql]
+        - name: "{% if ansible_distribution == 'Devuan' %}mariadb{% else %}mysql{% endif %}.conf.d/mysql.cnf"
+          content: |
+            [mysql]
+        - name: "{% if ansible_distribution == 'Devuan' %}mariadb{% else %}mysql{% endif %}.conf.d/mysqld.cnf"
+          content: |
+            [mysqld]
+            user		= mysql
+            bind-address		= 127.0.0.1
+            mysqlx-bind-address	= 127.0.0.1
+            key_buffer_size		= 16M
+            myisam-recover-options  = BACKUP
+            log_error = /var/log/mysql/error.log
+            max_binlog_size   = 100M
+            socket = {{ mysql_socket_file }}
+
+      Devuan:
+        # Devuan 3, mariadb-server-10.3
+        - name: mariadb.conf.d/50-server.cnf
+          state: present
+          content: |
+            [server]
+            [mysqld]
+            user                    = {{ mysql_user }}
+            pid-file                = /run/mysqld/mysqld.pid
+            socket                  = {{ mysql_socket_file }}
+            basedir                 = /usr
+            datadir                 = {{ mysql_db_dir }}
+            tmpdir                  = /tmp
+            lc-messages-dir         = /usr/share/mysql
+            bind-address            = {{ mysql_listen_address }}
+            query_cache_size        = 16M
+            log_error = /var/log/mysql/error.log
+            expire_logs_days        = 10
+            character-set-server  = utf8mb4
+            collation-server      = utf8mb4_general_ci
+            [embedded]
+            [mariadb]
+            [mariadb-10.3]
+        - name: mariadb.conf.d/50-mysql-clients.cnf
+          state: present
+          content: |
+            [mysql]
+            default-character-set = utf8mb4
+            [mysql_upgrade]
+            [mysqladmin]
+            [mysqlbinlog]
+            [mysqlcheck]
+            [mysqldump]
+            [mysqlimport]
+            [mysqlshow]
+            [mysqlslap]
+        - name: mariadb.conf.d/50-client.cnf
+          state: present
+          content: |
+            [client]
+            default-character-set = utf8mb4
+            socket = {{ mysql_socket_file }}
+            [client-mariadb]
+        - name: mariadb.conf.d/50-mysqld_safe.cnf
+          state: present
+          content: |
+            [mysqld_safe]
+            socket		= {{ mysql_socket_file }}
+            nice		= 0
+            skip_log_error
+            syslog
+        - name: conf.d/mysql.cnf
+          state: present
+          content: |
+            [mysql]
+        - name: conf.d/mysqldump.cnf
+          state: present
+          content: |
+            [mysqldump]
+            quick
+            quote-names
+            max_allowed_packet	= 16M
+        - name: my.cnf
+          state: present
+          follow: yes
+          content: |
+            [client-server]
+            !includedir /etc/mysql/conf.d/
+            !includedir /etc/mysql/mariadb.conf.d/
+        - name: my.cnf.fallback
+          state: present
+          content: |
+            !includedir /etc/mysql/conf.d/
+
     os_mysql_config_fragments:
       OpenBSD:
         - name: my.cnf
@@ -103,67 +228,7 @@
             max_allowed_packet              = 256M
             quote_names
             quick
-      Debian:
-        - name: remove_me.cnf
-          state: absent
-        # the following contents were taken from Ubuntu 20.04 (focal),
-        # mysql-server-8.0, without comments.
-        #
-        # cd /etc/mysql
-        # cat * */* | sed -e 's/^#.*//' -e '/^$/d' > /tmp/old
-        # cat * */* | sed -e 's/^#.*//' -e '/^$/d' > /tmp/new
-        # diff -Nru /tmp/old /tmp/new
-        #
-        # XXX my.cnf on Ubuntu is a symlink. follow the link with `follow:
-        # yes`, and do not create `/etc/mysql/mysql.cnf`.
-        #
-        # my.cnf -> /etc/alternatives/my.cnf -> /etc/mysql/mysql.cnf
-        - name: my.cnf
-          follow: yes
-          content: |
-            !includedir /etc/mysql/conf.d/
-            !includedir /etc/mysql/mysql.conf.d/
-        - name: debian.cnf
-          # XXX managing `debian.cnf` with ansible is not a good idea.
-          # avoid in production if possible
-          mode: '0600'
-          content: |
-            [client]
-            host     = localhost
-            user     = debian-sys-maint
-            password = CJ8GXhz10RaeSNE9
-            socket   = {{ mysql_socket_file }}
-            [mysql_upgrade]
-            host     = localhost
-            user     = debian-sys-maint
-            password = CJ8GXhz10RaeSNE9
-            socket   = {{ mysql_socket_file }}
-        - name: my.cnf.fallback
-          content: |
-            !includedir /etc/mysql/conf.d/
-        - name: conf.d/mysqldump.cnf
-          content: |
-            [mysqldump]
-            quick
-            quote-names
-            max_allowed_packet	= 16M
-        - name: conf.d/mysql.cnf
-          content: |
-            [mysql]
-        - name: mysql.conf.d/mysql.cnf
-          content: |
-            [mysql]
-        - name: mysql.conf.d/mysqld.cnf
-          content: |
-            [mysqld]
-            user		= mysql
-            bind-address		= 127.0.0.1
-            mysqlx-bind-address	= 127.0.0.1
-            key_buffer_size		= 16M
-            myisam-recover-options  = BACKUP
-            log_error = /var/log/mysql/error.log
-            max_binlog_size   = 100M
-
+      Debian: "{{ dist_mysql_config_fragments[ansible_distribution] }}"
     mysql_config_fragments: "{{ os_mysql_config_fragments[ansible_os_family] }}"
     mysql_users:
       - name: me

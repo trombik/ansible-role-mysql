@@ -28,6 +28,9 @@ when "openbsd"
   package = "mariadb-server"
   default_group = "wheel"
   service = "mysqld"
+when "devuan"
+  package = "mariadb-server"
+  fragments = %w[mariadb.conf.d/50-server.cnf mariadb.conf.d/50-mysql-clients.cnf mariadb.conf.d/50-client.cnf mariadb.conf.d/50-mysqld_safe.cnf conf.d/mysql.cnf conf.d/mysqldump.cnf my.cnf.fallback]
 end
 
 describe package(package) do
@@ -42,10 +45,12 @@ fragments.each do |f|
     it { should be_grouped_into default_group }
     if f == "debian.cnf"
       it { should be_mode 600 }
+      its(:content) { should_not match Regexp.escape("Managed by ansible") } if os[:family] == "ubuntu"
+      its(:content) { should match Regexp.escape("Managed by ansible") } if os[:family] == "devuan"
     else
       it { should be_mode 644 }
+      its(:content) { should match Regexp.escape("Managed by ansible") }
     end
-    its(:content) { should match Regexp.escape("Managed by ansible") }
   end
 end
 
@@ -62,6 +67,12 @@ when "ubuntu"
   describe file "/etc/mysql/my.cnf" do
     it { should exist }
     it { should be_symlink }
+  end
+when "devuan"
+  describe file "/etc/mysql/debian.cnf" do
+    it { should exist }
+    it { should be_file }
+    its(:content) { should_not match(/password\s*=\s*$/) }
   end
 end
 

@@ -1,22 +1,21 @@
 ---
 
-- name: Install mysql
+- name: Install mysql_package
   ansible.builtin.apt:
     name: "{{ mysql_package }}"
     state: present
-    policy_rc_d: 101
   register: __register_mysql_apt_mysql
+
+- name: Set fact __mysql_reset_password_empty
+  ansible.builtin.set_fact:
+    __mysql_reset_password_empty: yes
+  when:
+    - __register_mysql_apt_mysql['changed']
 
 - name: Install PyMySQL
   ansible.builtin.apt:
     name: "python{{ ansible_python['version']['major'] }}-pymysql"
     state: present
-
-- name: Set fact __mysql_reset_password_empty
-  set_fact:
-    __mysql_reset_password_empty: yes
-  when:
-    - __register_mysql_apt_mysql['changed']
 
 - name: Install mysql_extra_packages
   ansible.builtin.apt:

@@ -1,0 +1,13 @@
+# Managed by ansible
+# Automatically generated for Debian scripts. DO NOT TOUCH!
+[client]
+host     = localhost
+user     = root
+password = {{ mysql_login_password }}
+socket   = {{ mysql_socket_file }}
+[mysql_upgrade]
+host     = localhost
+user     = root
+password = {{ mysql_login_password }}
+socket   = {{ mysql_socket_file }}
+basedir  = /usr
